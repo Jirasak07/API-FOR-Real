@@ -11,40 +11,64 @@ const multer = require("multer");
 
 // img storage confing
 var imgconfig = multer.diskStorage({
-  destination:(req,file,callback)=>{
-      callback(null,"./asset/img");
+  destination: (req, file, callback) => {
+    callback(null, "./asset/img");
   },
-  filename:(req,file,callback)=>{
-    // file.originalname = new Buffer(file.originalname, 'ascii').toString('utf-8'); change name to utf-8
-      callback(null,file.originalname)
-  }
+  filename: (req, file, callback) => {
+    file.originalname = new Buffer(file.originalname, "ascii").toString(
+      "utf-8"
+    );
+    //  change name to utf-8
+    callback(null, file.originalname);
+  },
 });
 // img filter
-const isImage = (req,file,callback)=>{
-  if(file.mimetype.startsWith("image")){
-      callback(null,true)
-  }else{
-      callback(null,Error("only image is allowd"))
+const isImage = (req, file, callback) => {
+  // if(file.mimetype.startsWith("image")){
+  if (
+    file.mimetype == "image/png" ||
+    file.mimetype == "image/jpg" ||
+    file.mimetype == "image/jpeg"
+  ) {
+    callback(null, true);
+  } else {
+    callback(null, false);
+    return callback(new Error("Only .png, .jpg and .jpeg format allowed!"));
   }
-}
+};
 
 var upload = multer({
-  storage:imgconfig,
-  fileFilter:isImage
-})
-
+  storage: imgconfig,
+  fileFilter: isImage,
+});
 app.use(cors());
 const mysql = require("mysql2");
+const { useState } = require("react");
 
 const connection = mysql.createConnection({
   host: "localhost",
   user: "root",
   database: "equipmentdb",
 });
-app.post("/upload",upload.single("photo"),(req,res)=>{
-  console.log(req.file)
-  res.json(req.file)
-})
+app.use("/img",express.static("./asset/img"))
+app.post("/upload", upload.single("photo"), jsonParser, (req, res, next) => {
+  console.log("."+req.file.originalname.split(".")[2]);
+  var type = "."+req.file.originalname.split(".")[2]
+  var name = req.file.originalname;
+  var condition = req.file.originalname.replace(type,"");
+  console.log(condition)
+  connection.execute("UPDATE product SET image = ? WHERE pid = ? ", [
+    name,
+    condition,
+  ] ,function (err, results, fields) {
+    if (err) {
+      res.json({ status: "error", message: err });
+      return;
+    }
+    res.json({ status: "ok" });
+  });
+  // res.json(req.file);
+});
 
 app.post("/add-user", jsonParser, function (req, res, next) {
   bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
@@ -322,7 +346,7 @@ app.post("/login", jsonParser, function (req, res, next) {
               message: "เข้าสู่ระบบสำเร็จ",
               token,
               userid: user[0].user_id,
-              mid:user[0].main_aid,
+              mid: user[0].main_aid,
             });
           } else {
             res.json({
@@ -427,8 +451,6 @@ app.post("/add-sub-agency", jsonParser, function (req, res, next) {
     }
   );
 });
-
-
 
 app.listen(3333, function () {
   console.log("CORS-enabled web server listening on port 3333");
