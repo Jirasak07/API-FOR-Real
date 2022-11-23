@@ -322,7 +322,7 @@ app.post("/login", jsonParser, function (req, res, next) {
               message: "เข้าสู่ระบบสำเร็จ",
               token,
               userid: user[0].user_id,
-              mid:user[0].main_aid
+              mid:user[0].main_aid,
             });
           } else {
             res.json({
