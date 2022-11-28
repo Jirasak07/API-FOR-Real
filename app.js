@@ -50,23 +50,25 @@ const connection = mysql.createConnection({
   user: "root",
   database: "equipmentdb",
 });
-app.use("/img",express.static("./asset/img"))
+app.use("/img", express.static("./asset/img"));
+
 app.post("/upload", upload.single("photo"), jsonParser, (req, res, next) => {
-  console.log("."+req.file.originalname.split(".")[2]);
-  var type = "."+req.file.originalname.split(".")[2]
+  console.log("." + req.file.originalname.split(".")[2]);
+  var type = "." + req.file.originalname.split(".")[2];
   var name = req.file.originalname;
-  var condition = req.file.originalname.replace(type,"");
-  console.log(condition)
-  connection.execute("UPDATE product SET image = ? WHERE pid = ? ", [
-    name,
-    condition,
-  ] ,function (err, results, fields) {
-    if (err) {
-      res.json({ status: "error", message: err });
-      return;
-    }
-    res.json({ status: "ok" });
-  });
+  var condition = req.file.originalname.replace(type, "");
+  console.log(condition);
+  // connection.execute(
+  //   "UPDATE product SET image = ? WHERE pid = ? ",
+  //   [name, condition],
+  //   function (err, results, fields) {
+  //     if (err) {
+  //       res.json({ status: "error", message: err });
+  //       return;
+  //     }
+  //     res.json({ status: "ok" });
+  //   }
+  // );
   // res.json(req.file);
 });
 
@@ -159,7 +161,44 @@ app.get("/show-pstatus", jsonParser, function (req, res, next) {
     }
   );
 });
+app.post("/product-added-group", jsonParser, function (req, res, next) {
+  const count = req.body.qty;
+  const id = req.body.pid;
 
+  for (i = 1; i <= count; ) {
+    // console.log(id + "/" + i);
+    connection.execute(
+      "INSERT INTO product (pid, pname, pdetail, qty, unit, price, finance, acquirement, ptype_id, seller, sub_aid, pstatus_id, buydate, pickdate, fisicalyear) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      [
+        req.body.pid + "/" + i,
+        req.body.pname,
+        req.body.pdetail,
+        1,
+        req.body.unit,
+        req.body.price,
+        req.body.finance,
+        req.body.acquirement,
+        req.body.ptype_id,
+        req.body.seller,
+        req.body.sub_aid,
+        req.body.pstatus_id,
+        req.body.buydate,
+        req.body.pickdate,
+        req.body.fisicalyear,
+      ],
+      function (err, results, fields) {
+        // console.log(id + "/" + i);
+      
+      }
+    );
+    i++;
+  }
+  res.json("success")
+        if(err)res.json(err);
+  // connection.execute(
+  //   ""
+  // )
+});
 app.post("/product-added", jsonParser, function (req, res, next) {
   connection.execute(
     "INSERT INTO product (pid, pname, pdetail, qty, unit, price, finance, acquirement, ptype_id, seller, sub_aid, pstatus_id, buydate, pickdate, fisicalyear) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -181,8 +220,12 @@ app.post("/product-added", jsonParser, function (req, res, next) {
       req.body.fisicalyear,
     ],
     function (err, results, fields) {
-      res.json(results); // results contains rows returned by server
-      // res.json(fields); // fields contains extra meta data about results, if available
+      if (err) {
+        res.json(err);
+        console.log(err);
+      }
+      res.json(results);
+      console.log(results.status);
     }
   );
 });
