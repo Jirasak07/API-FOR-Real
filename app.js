@@ -8,6 +8,8 @@ const saltRounds = 10;
 var jwt = require("jsonwebtoken");
 const secret = "JirasakPRJ2022";
 const multer = require("multer");
+const Excel = require('exceljs');
+const workbook = new Excel.Workbook();
 
 // img storage confing
 var imgconfig = multer.diskStorage({
@@ -42,9 +44,8 @@ var upload = multer({
   fileFilter: isImage,
 });
 app.use(cors());
+app.use(bodyParser.json());
 const mysql = require("mysql2");
-const { useState } = require("react");
-
 const connection = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -53,11 +54,11 @@ const connection = mysql.createConnection({
 app.use("/img", express.static("./asset/img"));
 
 app.post("/upload", upload.single("photo"), jsonParser, (req, res, next) => {
-  console.log("." + req.file.originalname.split(".")[2]);
+  // console.log("." + req.file.originalname.split(".")[2]);
   var type = "." + req.file.originalname.split(".")[2];
   var name = req.file.originalname;
   var condition = req.file.originalname.replace(type, "");
-  console.log(condition);
+  // console.log(condition);
   // connection.execute(
   //   "UPDATE product SET image = ? WHERE pid = ? ",
   //   [name, condition],
@@ -72,7 +73,7 @@ app.post("/upload", upload.single("photo"), jsonParser, (req, res, next) => {
   // res.json(req.file);
 });
 
-app.post("/add-user", jsonParser, function (req, res, next) {
+app.post("/officer-add", jsonParser, function (req, res, next) {
   bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
     connection.execute(
       "INSERT INTO users ( user_id, username, password, name,ustatus_id, main_aid)  VALUES( ?, ?, ?, ?, ?, ?)",
@@ -103,7 +104,6 @@ app.get("/show-agen", jsonParser, function (req, res, next) {
     }
   );
 });
-
 //save agen edit
 app.put("/agen-edited", jsonParser, function (req, res, next) {
   connection.execute(
@@ -161,73 +161,37 @@ app.get("/show-pstatus", jsonParser, function (req, res, next) {
     }
   );
 });
-app.post("/product-added-group", jsonParser, function (req, res, next) {
+app.post("/addtest", jsonParser, function (req, res, next) {
   const count = req.body.qty;
-  const id = req.body.pid;
-
-  for (i = 1; i <= count; ) {
-    // console.log(id + "/" + i);
-    connection.execute(
-      "INSERT INTO product (pid, pname, pdetail, qty, unit, price, finance, acquirement, ptype_id, seller, sub_aid, pstatus_id, buydate, pickdate, fisicalyear) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-      [
-        req.body.pid + "/" + i,
-        req.body.pname,
-        req.body.pdetail,
-        1,
-        req.body.unit,
-        req.body.price,
-        req.body.finance,
-        req.body.acquirement,
-        req.body.ptype_id,
-        req.body.seller,
-        req.body.sub_aid,
-        req.body.pstatus_id,
-        req.body.buydate,
-        req.body.pickdate,
-        req.body.fisicalyear,
-      ],
+  function Qry(vali) {
+    connection.query(
+      "INSERT INTO main_agen (main_aid,main_aname) VALUES(?,?)",
+      [req.body.main_aid + "/" + vali, req.body.main_aname],
       function (err, results, fields) {
-        // console.log(id + "/" + i);
-      
+        // console.log("loop",val1);
+        // console.log(req.body.main_aid + "/" + vali);
+        // if(err)console.log("err =" + err)
+        if (err && vali == count) {
+          console.log(vali);
+          ChkError("error", err);
+        } else if (!err && vali == count) {
+          ChkError("success");
+        }
       }
     );
-    i++;
   }
-  res.json("success")
-        if(err)res.json(err);
-  // connection.execute(
-  //   ""
-  // )
-});
-app.post("/product-added", jsonParser, function (req, res, next) {
-  connection.execute(
-    "INSERT INTO product (pid, pname, pdetail, qty, unit, price, finance, acquirement, ptype_id, seller, sub_aid, pstatus_id, buydate, pickdate, fisicalyear) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-    [
-      req.body.pid,
-      req.body.pname,
-      req.body.pdetail,
-      req.body.qty,
-      req.body.unit,
-      req.body.price,
-      req.body.finance,
-      req.body.acquirement,
-      req.body.ptype_id,
-      req.body.seller,
-      req.body.sub_aid,
-      req.body.pstatus_id,
-      req.body.buydate,
-      req.body.pickdate,
-      req.body.fisicalyear,
-    ],
-    function (err, results, fields) {
-      if (err) {
-        res.json(err);
-        console.log(err);
-      }
-      res.json(results);
-      console.log(results.status);
+  function ChkError(val1, val2) {
+    console.log("results = " + val1);
+    if (val1 == "error") {
+      res.send("error =" + val2);
+    } else if (val1 == "success") {
+      res.send("success");
     }
-  );
+  }
+
+  for (i = 1; i <= count; i++) {
+    Qry(i);
+  }
 });
 
 app.get("/type", jsonParser, function (req, res, next) {
@@ -242,7 +206,7 @@ app.get("/type", jsonParser, function (req, res, next) {
 
 app.post("/product", jsonParser, function (req, res, next) {
   connection.execute(
-    "SELECT *, sub_aname , ptype_name FROM product LEFT JOIN sub_agen ON product.sub_aid = sub_agen.sub_aid LEFT JOIN product_type ON product.ptype_id = product_type.ptype_id Where sub_agen.main_aid = ? ",
+    "SELECT *, sub_aname , ptype_name FROM product LEFT JOIN sub_agen ON product.sub_aid = sub_agen.sub_aid LEFT JOIN product_type ON product.ptype_id = product_type.ptype_id Where sub_agen.main_aid = ?  ",
     [req.body.main_aid],
     function (err, results, fields) {
       res.json(results); // results contains rows returned by server
@@ -495,6 +459,193 @@ app.post("/add-sub-agency", jsonParser, function (req, res, next) {
   );
 });
 
+////////////สำหรับจัดการข้อมูลครุภัณฑ์////////////
+
+///////////Add/////////////////
+app.post("/product-added-group", jsonParser, function (req, res, next) {
+  res.setHeader("Content-Type", "text/html");
+  const count = req.body.qty;
+  function Qry(vali) {
+    connection.query(
+      "INSERT INTO product (pid, pname, pdetail, qty, unit, price, finance, acquirement, ptype_id, seller, sub_aid, pstatus_id, buydate, pickdate, fisicalyear,image) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      [
+        req.body.pid + "/" + vali,
+        req.body.pname,
+        req.body.pdetail,
+        1,
+        req.body.unit,
+        req.body.price,
+        req.body.finance,
+        req.body.acquirement,
+        req.body.ptype_id,
+        req.body.seller,
+        req.body.sub_aid,
+        req.body.pstatus_id,
+        req.body.buydate,
+        req.body.pickdate,
+        req.body.fisicalyear,
+        req.body.image,
+      ],
+      function (err, results, fields) {
+        if (err && vali == count) {
+          ChkError("error", err);
+        } else if (!err && vali == count) {
+          ChkError("success");
+        }
+      }
+    );
+  }
+  function ChkError(val1, val2) {
+    console.log("results = " + val1);
+    if (val1 == "error") {
+      res.send("error");
+    } else if (val1 == "success") {
+      res.send("success");
+    }
+  }
+
+  for (i = 1; i <= count; i++) {
+    Qry(i);
+  }
+});
+app.post("/product-added", jsonParser, function (req, res, next) {
+  connection.execute(
+    "INSERT INTO product (pid, pname, pdetail, qty, unit, price, finance, acquirement, ptype_id, seller, sub_aid, pstatus_id, buydate, pickdate, fisicalyear,image) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    [
+      req.body.pid,
+      req.body.pname,
+      req.body.pdetail,
+      req.body.qty,
+      req.body.unit,
+      req.body.price,
+      req.body.finance,
+      req.body.acquirement,
+      req.body.ptype_id,
+      req.body.seller,
+      req.body.sub_aid,
+      req.body.pstatus_id,
+      req.body.buydate,
+      req.body.pickdate,
+      req.body.fisicalyear,
+      req.body.imgname,
+    ],
+    function (err, results, fields) {
+      if (err) {
+        res.json({ status: "error", message: err });
+        console.log("EOROROROROROR", err);
+      } else {
+        res.json({ status: "success" });
+        console.log("success");
+      }
+    }
+  );
+});
+
+//////////Show////////////////
+app.post("/product-sort", jsonParser, function (req, res, next) {
+  connection.execute(
+    "SELECT *, sub_aname , ptype_name FROM product LEFT JOIN sub_agen ON product.sub_aid = sub_agen.sub_aid LEFT JOIN product_type ON product.ptype_id = product_type.ptype_id Where sub_agen.main_aid = ? AND pstatus_id = ? ",
+    [req.body.main_aid, req.body.pstatus_id],
+    function (err, results, fields) {
+      res.json(results); // results contains rows returned by server
+      // res.json(fields); // fields contains extra meta data about results, if available
+    }
+  );
+});
+
+app.post("/show-detail-product", jsonParser, function (req, res, next) {
+  const pid = req.body.pid;
+});
+
+app.post("/find-img", jsonParser, function (req, res, next) {
+  const pid = req.body.pid;
+  connection.execute(
+    "SELECT image from product where pid = ?",
+    [pid],
+    function (err, results) {
+      if (err) {
+        console.log("Error" + err);
+      } else {
+        res.json(results);
+      }
+    }
+  );
+});
+
+app.get("/product-normal", jsonParser, function (req, res, next) {
+  connection.query(
+    "SELECT COUNT(pid) as normal FROM product WHERE pstatus_id = 1 ",
+    function (err, results, fields) {
+      if (!err) {
+        res.send(results);
+      } else if (err) {
+        res.send("Error :" + err);
+      }
+    }
+  );
+});
+
+app.get("/product-out", jsonParser, function (req, res, next) {
+  connection.query(
+    "SELECT COUNT(pid) as pout FROM product WHERE pstatus_id = 5 ",
+    function (err, results, fields) {
+      if (!err) {
+        res.send(results);
+      } else if (err) {
+        res.send("Error :" + err);
+      }
+    }
+  );
+});
+/////////Edit//////////////
+app.post("/product-showedit", jsonParser, function (req, res, next) {
+  connection.execute(
+    "SELECT * from product where pid = ?",
+    [req.body.pid],
+    function (err, results, fields) {
+      if (!err) {
+        res.json(results);
+      } else if (err) {
+        res.send("Error :" + err);
+      }
+    }
+  );
+});
+
+///////////////////////////////////////////////
+app.put("/update-product", jsonParser, function (req, res, next) {
+  connection.execute(
+    "UPDATE product SET pname=?, pdetail=?, unit=?, price=?, finance=?, acquirement=?, ptype_id=?, seller=?, buydate=?, pickdate=?, fisicalyear=?,image=?  Where pid = ? ",
+    [
+      req.body.pname,
+      req.body.pdetail,
+      req.body.unit,
+      req.body.price,
+      req.body.finance,
+      req.body.acquirement,
+      req.body.ptype_id,
+      req.body.seller,
+      req.body.buydate,
+      req.body.pickdate,
+      req.body.fisicalyear,
+      req.body.image,
+      req.body.pid,
+    ],
+    function (err, results, fields) {
+      if (!err) {
+        res.json({ status: "success" });
+      } else if (err) {
+        console.log("error is :" + err);
+        res.send({ status: "error" });
+        console.log("error : Isssssssssssss :" + err);
+      }
+    }
+  );
+});
+
+app.post("/date", jsonParser, function (req, res, next) {
+
+});
 app.listen(3333, function () {
   console.log("CORS-enabled web server listening on port 3333");
 });
